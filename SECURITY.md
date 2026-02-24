@@ -161,6 +161,7 @@ Response urgency is prioritized based on severity and exploitability.
 **Official Distribution Channels:**
 - GitHub Releases: [github.com/HuckleR2003/PC_Workman_HCK/releases](https://github.com/HuckleR2003/PC_Workman_HCK/releases)
 - Project Website: [huckler2003.github.io/PC_Workman_HCK](https://huckler2003.github.io/PC_Workman_HCK)
+- Sourceforge: [https://sourceforge.net/projects/pc-workman-hck/](https://sourceforge.net/projects/pc-workman-hck/)
 
 **Unofficial sources are not endorsed and may distribute modified or malicious versions:**
 - Third-party download sites
