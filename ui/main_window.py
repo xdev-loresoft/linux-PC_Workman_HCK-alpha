@@ -60,6 +60,16 @@ class MainWindow:
         self.root.title("PC Workman – HCK_Labs v1.4.0")
         self.root.configure(bg=THEME["bg_main"])
 
+        # UI Layout Constants
+        self.LED_SEGMENTS = 18
+        self.LED_HEIGHT = 18
+        self.TOP_BAR_HEIGHT = 60
+        self.CHART_HEIGHT = 190
+        self.RIGHT_PANEL_WIDTH = 220
+        self.CONTENT_PADDING = 8
+        self.TOP_BAR_OFFSET = 64
+        self.PANEL_SPACING = 6
+        
         # Window settings
         self.window_width = THEME['win_width']
         self.window_height = THEME['win_height']
@@ -704,18 +714,21 @@ if self.tray_manager:
         top_frame.place(x=8, y=8, width=THEME["win_width"] - THEME["sidebar_expanded"] - 16, height=60)
 
         # LED bars
-        self.cpu_led = LEDSegmentBar(top_frame, "CPU", LED_CPU_MAP, segments=18, height=18)
-        self.gpu_led = LEDSegmentBar(top_frame, "GPU", LED_GPU_MAP, segments=18, height=18)
-        self.ram_led = LEDSegmentBar(top_frame, "RAM", LED_RAM_MAP, segments=18, height=18)
+        self.cpu_led = LEDSegmentBar(top_frame, "CPU", LED_CPU_MAP, 
+                                     segments=self.LED_SEGMENTS, height=self.LED_HEIGHT)
+        self.gpu_led = LEDSegmentBar(top_frame, "GPU", LED_GPU_MAP, 
+                                     segments=self.LED_SEGMENTS, height=self.LED_HEIGHT)
+        self.ram_led = LEDSegmentBar(top_frame, "RAM", LED_RAM_MAP, 
+                                     segments=self.LED_SEGMENTS, height=self.LED_HEIGHT)
 
-        self.cpu_led.frame.place(relx=0, rely=0, relwidth=0.33, height=60)
-        self.gpu_led.frame.place(relx=0.33, rely=0, relwidth=0.33, height=60)
-        self.ram_led.frame.place(relx=0.66, rely=0, relwidth=0.34, height=60)
+        self.cpu_led.frame.place(relx=0, rely=0, relwidth=0.33, height=self.TOP_BAR_HEIGHT)
+        self.gpu_led.frame.place(relx=0.33, rely=0, relwidth=0.33, height=self.TOP_BAR_HEIGHT)
+        self.ram_led.frame.place(relx=0.66, rely=0, relwidth=0.34, height=self.TOP_BAR_HEIGHT)
 
     def _build_center_area(self, parent):
         content_w = THEME["win_width"] - THEME["sidebar_expanded"] - 26
-        chart_h = 190
-        right_w = 220
+        chart_h = self.CHART_HEIGHT
+        right_w = self.RIGHT_PANEL_WIDTH
 
         # Chart frame with click event
         self.chart_frame = tk.Frame(parent, bg=THEME["bg_panel"])
@@ -1028,15 +1041,79 @@ if self.tray_manager:
                 })
 
             # Update lists using existing render methods
+            def _render_process_list(self, procs, container, widgets_storage):
+        """Shared rendering logic for both user and system processes"""
+        # Clear old widgets
+        for widget in widgets_storage:
+            widget.destroy()
+        widgets_storage.clear()
+
+        # Gradient backgrounds for TOP 1-5
+        row_gradients = ["#1c1f26", "#1e2128", "#20232a", "#22252c", "#24272e"]
+
+        for i, proc in enumerate(procs[:5], start=1):
+            # Get process info
+            if self.classifier and 'classification' in proc:
+                cls = proc['classification']
+                display_name = cls.get('display_name', proc['name'])
+                proc_name = proc.get('name', 'unknown')
+            else:
+                display_name = proc.get('name', 'unknown')
+                proc_name = proc.get('name', 'unknown')
+
+            cpu = proc.get('cpu_percent', 0)
+            ram_mb = proc.get('ram_MB', 0)
+
+            # Row with gradient background
+            row_bg = row_gradients[i-1] if i <= len(row_gradients) else THEME["bg_panel"]
+            row = tk.Frame(container, bg=row_bg, cursor="hand2", height=20)
+            row.pack(fill="x", pady=1, padx=2)
+            row.pack_propagate(False)
+
+            # Process name (left side)
+            name_lbl = tk.Label(
+                row,
+                text=f"{i}. {display_name[:18]}",
+                font=("Segoe UI", 8),
+                bg=row_bg,
+                fg=THEME["text"],
+                anchor="w"
+            )
+            name_lbl.pack(side="left", padx=6, fill="y")
+
+            # Right side - CPU and RAM SIDE BY SIDE
+            bars_frame = tk.Frame(row, bg=row_bg)
+            bars_frame.pack(side="right", padx=4)
+
+            # CPU bar and value (LEFT)
+            cpu_container = tk.Frame(bars_frame, bg=row_bg)
+            cpu_container.pack(side="left", padx=2)
+
+            cpu_lbl = tk.Label(cpu_container, text="CPU", font=("Segoe UI", 6),
+                              bg=row_bg, fg="#6b7280", width=3)
+            cpu_lbl.pack(side="left", padx=(0,2))
+
+            self._create_inline_bar(cpu_container, cpu, "#3b82f6", f"{cpu:.0f}%", bg=row_bg)
+
+            # RAM bar and value (RIGHT)
+            ram_container = tk.Frame(bars_frame, bg=row_bg)
+            ram_container.pack(side="left", padx=2)
+
+            ram_lbl = tk.Label(ram_container, text="RAM", font=("Segoe UI", 6),
+                              bg=row_bg, fg="#6b7280", width=3)
+            ram_lbl.pack(side="left", padx=(0,2))
+
+            ram_pct = min((ram_mb / self.total_ram_mb) * 100, 100)
+            self._create_inline_bar(ram_container, ram_pct, "#fbbf24", f"{ram_mb:.0f}MB", bg=row_bg)
+
+            # Click to show info
+            row.bind("<Button-1>", lambda e, p=proc_name: self._show_process_info_click(e, p))
+
+            widgets_storage.append(row)
             self._render_user_processes(user_procs)
-            self._render_system_processes(system_procs)
-
-            print(f"[TimeTravel] Updated lists for {time.strftime('%H:%M:%S', time.localtime(timestamp))}")
-
-        except Exception as e:
-            print(f"[TimeTravel] Error updating process lists: {e}")
-            import traceback
-            traceback.print_exc()
+            def _render_user_processes(self, procs):
+        """Modern minimalist process display - side by side CPU/RAM bars with gradient shading"""
+        self._render_process_list(procs, self.top5_container, self.top5_widgets)
 
     def show_page(self, page_name):
         """Switch to a different page"""
