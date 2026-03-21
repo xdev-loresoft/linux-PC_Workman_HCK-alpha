@@ -34,7 +34,8 @@ Built for understanding system behavior, not just watching numbers change.
 PC_Workman v2.0 is being prepared for Microsoft Store publication (Q3 2026).
 
 **Current progress:**
-- v1.6.8 stable release
+- v1.6.3 STABLE - .exe
+- v1.6.8 stable release for testers
 - [v1.7.9 roadmap](https://github.com/users/HuckleR2003/projects/3/views/1) (16 features planned)
 - [Public project board](https://github.com/users/HuckleR2003/projects/3/views/1)
 - [Development updates](https://github.com/HuckleR2003/PC_Workman_HCK/discussions/13)
