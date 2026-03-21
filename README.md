@@ -7,22 +7,16 @@
 ![License](https://img.shields.io/badge/License-MIT-blue)
 -
 ## Overview
-PC_Workman is a real-time system monitoring tool built in Python. It combines live performance diagnostics, AI-assisted analysis, and a modular architecture designed for intelligent system optimization.
+PC_Workman is a desktop system monitoring application built entirely in Python (Tkinter). It combines real-time hardware diagnostics, a local AI insights engine, long-term SQLite statistics, and optimization tools — all in a single-window dark-theme interface inspired by MSI Afterburner, HWiNFO, and Apple's design language.
 
-**What it does:**
-- Real-time CPU, GPU, RAM, and network monitoring
-- Process intelligence (identifies what's consuming resources)
-- AI-powered diagnostics via hck_GPT integration
-- Historical trend analysis (see patterns over time)
-- Gaming analytics with bottleneck detection
-
-**Why it's different:**
-- Traditional tools show "CPU: 87%" → PC_Workman explains *why*
-- Time-travel diagnostics → click any historical point to see what was running
-- Voltage spike detection → unique feature nobody else has
-- Built for understanding, not just watching
+**What makes it different from Task Manager or HWMonitor:**
+- **Explains the "why"** — not just "CPU: 87%", but *which process* is responsible and whether it's a recurring pattern
+- **Long-term memory** — SQLite pipeline stores minute/hourly/daily/monthly stats across sessions; your lifetime PC usage is always available
+- **Local AI insights** — `hck_GPT` InsightsEngine detects habits, anomalies, gaming sessions, and generates personalized teasers — no external API, no cloud, fully offline
+- **Time-travel diagnostics** — click any historical point in the Monitoring & Alerts center to see what was running at that moment
+- **One-click optimization** — Turbo Boost toggle, services wizard, startup cleanup, telemetry disable — all with rollback safety
 -
-## Quick Start
+## 🚀 Quick Start
 
 ### Windows Users (Easiest)
 ```
@@ -43,37 +37,186 @@ python startup.py
 
 Full setup guide: **[GETTING_STARTED.md](./GETTING_STARTED.md)**
 -
-## Features
+## The Three Pillars
 
-### Core Monitoring
-- Real-time CPU, GPU, RAM tracking
-- Network bandwidth per-application
-- Process identification and labeling
-- Temperature monitoring with trends
-- Historical data logging (daily, weekly, monthly)
+### 1. Main Dashboard — Real-Time Command Center
 
-### Intelligence (hck_GPT)
-- Local insights engine — habit tracking, anomaly awareness, personalized teasers
-- "Today Report" with usage chart, top processes, and alert status
-- 7-day recurring pattern detection (games, browsers, dev tools)
-- Spike/anomaly reporting from Stats Engine events
-- Gaming analytics with FPS tracking
-- Bottleneck detection (CPU vs GPU limited)
-- Safe system optimization with rollback
+The primary view. Everything at a glance, zero clicks to understand your PC's state.
 
-### Interface
-- Modern dashboard (Apple-inspired design)
-- Ultra-compact information density
-- Color-coded process lists
-- Interactive charts and metrics
-- Click-to-investigate functionality
+**Layout** (1160×575px, sidebar + 3-column content):
 
-### Coming Soon
-- Official .exe installer (v1.6.0)
-- Voltage spike correlation (v1.6.0)
-- Real temperature sensors (v1.5.1)
-- ML pattern detection (v2.0)
-- Predictive maintenance alerts (v2.0)
+| Left Column | Center | Right Column |
+|---|---|---|
+| TOP 5 User Processes | Realtime Chart (CPU/RAM/GPU) | TOP 5 System Processes |
+| AI Info Panel | Live Metrics + Time Filters | |
+| | Turbo Boost + Optimization Tools | |
+
+**Session Average Bars** — three horizontal bars (CPU blue `#3b82f6`, GPU green `#10b981`, RAM amber `#fbbf24`) showing running averages since app launch. Calculated from up to 1000 samples with per-tick updates.
+
+**Hardware Cards** — three ultra-compact cards (CPU, RAM, GPU) each showing:
+- Real hardware model name (via WMIC/psutil, cached)
+- Mini sparkline chart (22px tall, dark `#0f1117` background)
+- Temperature bar (4px, heat-colored) with live reading
+- Health status indicator ("Wszystko OK" / "Wymagana inspekcja")
+- Load classification (Idle / Standard / Heavy / Critical)
+
+**Realtime Chart** — canvas-based bar chart with 100-sample rolling buffer:
+- Three overlaid series: CPU (dark blue `#1e3a8a`), RAM (amber `#fbbf24`), GPU (green `#10b981`)
+- **6 time filters**: LIVE (rolling buffer), 1H, 4H (query `minute_stats`), 1D (`hourly_stats`), 1W, 1M (`daily_stats`)
+- Data pulled directly from `hck_stats_engine` SQLite database
+- Reusable canvas rectangle pool — items created once, only `canvas.coords()` updated per tick
+- Auto-refresh every ~30s on historical modes
+
+**TOP 5 Process Panels** — widget-reuse pattern (no destroy/recreate):
+- Each row: process name (14 chars), CPU bar (blue, 30px), RAM bar (amber, 30px), percentage labels
+- Gradient row backgrounds (`#1c1f26` → `#24272e`)
+- User processes (left) vs System processes (right), updated every 3s
+- System idle/noise processes filtered at source
+
+**Turbo Boost Card** — one-click performance toggle:
+- Status: ON (green glow `#6ee7b7`) / OFF (red glow `#fca5a5`) with animated color cycling
+- "Configure" button opens Optimization overlay, "Launch/Stop" toggles boost
+- Blue gradient header (`#3b82f6`) with glowing effect (500ms cycle)
+
+**Optimization Tools Card** — green gradient (`#10b981`):
+- Active tools counter (0/16) with animated green glow
+- Links to full optimization page
+
+**AI Info Panel** (bottom-left, 50px height):
+- Purple accent (`#a78bfa`), Consolas 8pt, dark background `#0a0e27`
+- Typing animation: 70ms/char type, 6s hold, 30ms/3-char delete, 1.5s pause
+- 4 rotating messages about PC Workman
+- Blinking cursor (600ms toggle)
+
+**Performance**: Main loop at 1s cadence, hardware cards every 2s, tray every 3s, process lists every 3s. All `psutil.process_iter()` calls run on a background daemon thread — GUI thread only reads cached snapshots.
+
+---
+
+### 2. My PC — Hardware & Health
+
+A tabbed diagnostic center with 5 planned sections (Central fully implemented, others Coming Soon). Left sidebar with quick action buttons, right panel with scrollable hardware tables.
+
+**Quick Action Buttons** (6 buttons, canvas-rendered gradients with hover brightness):
+
+| Button | Color | Action |
+|---|---|---|
+| Health Report | Blue `#3b82f6` | Opens detailed component history |
+| Cleanup | Red `#ef4444` | Opens optimization services wizard |
+| Stats & Alerts | Yellow-gold gradient | Opens Monitoring & Alerts center |
+| Optimization & Services | Dark yellow → red gradient | Opens optimization dashboard |
+| First Setup & Drivers | Red → purple gradient | Driver updates + useless services off |
+| Stability Tests | Green `#10b981` | Internal diagnostics (file integrity, engine status, logs) |
+
+Each button has an info tooltip (hover "i" icon) with 2-line description.
+
+**Hardware Info Panel** (right side, 408px wide, scrollable):
+
+**Hey-USER Header** — shows computer hostname from `socket.gethostname()`, header image or blue fallback bar.
+
+**MOTHERBOARD Section** (trapezoid header with icon):
+- Model name badge (retrieved via WMIC, first 15 chars)
+- **Voltage Table**: +12V, +5V, +3.3V, DDR4 — each with Current/Min/Max columns
+- **Temperature Table**: CPU Core, CPU Socket, SYS — Current/Min/Max
+- **Disk Space Strip**: up to 4 partitions, color-coded (green <75%, yellow 75-90%, red >90%)
+- **Body Fans Strip**: CPU and chassis fan RPM readings
+
+**CPU Section** (trapezoid header with icon):
+- Model badge (via `platform.processor()` or WMIC, 25 chars)
+- **Voltage Table**: IA Offset, GT Offset, LLC/Ring, Sys Agent, V/O Max
+- **Temperature Table**: Package, Core Max, per-core readings (up to 6 cores, live from `psutil`)
+- **Power Table**: Package power, IA Cores power
+- **Clocks Table**: Per-core current/min/max MHz from `psutil.cpu_freq(percpu=True)`
+
+**Table Design** — mini data tables with:
+- Yellow title bar (`#fbbf24`) with green "OK" badge
+- Black column headers (CURRENT / MIN / MAX)
+- Dark rows (`#0f1117`) with white values on black backgrounds
+- 5-6pt fonts for maximum information density
+
+**Full Hardware Table Popup** — "Show Full Table" opens a 500×600 Toplevel with the complete ProInfoTable component (all MOTHERBOARD + CPU + GPU sections).
+
+---
+
+### 3. Fan Dashboard — Interactive Cooling Control
+
+MSI Afterburner-inspired fan curve editor with a dark navy theme (`#0a0e27`) and red/purple accents.
+
+**Profile System** — 5 trapezoidal profile buttons across the top:
+- **Default** / **Silent** / **AI** (adaptive) / **P1** / **P2** (user-saved)
+- Active: red gradient fill (`#8b0000` → `#ef4444`), white text
+- Inactive: dark gray (`#1a1d24`), gray text
+- Profiles saved as JSON to `data/profiles/`
+
+**Fan Status Cards** (2×2 grid) — each card shows:
+- Fan name (CPU FAN, GPU FAN, FAN 1, FAN 2)
+- Connection status (green "Connected" / gray "Not available")
+- Device model (e.g., "i5-13600K", "RTX 4070", "Noctua")
+- **Circular RPM indicator**: red arc (`#ef4444`) showing speed percentage, RPM value centered
+
+**Interactive Fan Curve Graph** (550×150 canvas, centerpiece):
+- **Grid**: dashed lines at 0/25/50/75/100% (speed) × 0/20/40/60/80/100°C (temperature)
+- **Purple gradient fill**: layered semi-transparent purple under the curve
+- **Curve line**: purple `#a855f7`, 3px width, connecting 6 draggable control points
+- **Control points**: white circles with purple outer glow — **drag to reshape the curve in real-time**
+- **Axis labels**: Y = fan speed %, X = temperature °C
+- **Live reading**: top-right corner shows current temp → speed mapping (e.g., "100°C → 90%")
+
+Default curve: (0°C, 25%) → (20°C, 30%) → (40°C, 40%) → (60°C, 55%) → (80°C, 75%) → (100°C, 90%)
+
+**Horizontal Sliders** — two modern sliders:
+- Dark track (`#374151`) with red progress fill (`#ef4444`)
+- White circular handle with red border
+- MAX FAN SPEED and SET FAN SPEED (0-3000 RPM range)
+
+**Action Buttons** (5 in a row under graph):
+- **Apply** (green `#10b981`) — apply current settings
+- **Revert** (gray) — revert to last saved
+- **Save Profile** (purple `#8b5cf6`) — opens save dialog for P1/P2 + load from file
+- **Export** (cyan `#06b6d4`) — export all settings to JSON
+- **Reset** (orange `#f59e0b`) — reset to default curve
+
+**Temperature Icons** (4 display elements):
+- BOARD, CPU, GPU: 80×80px icons with temperature overlay (white text, black outline)
+- FAN: 80×80px icon with **continuous rotation animation** (20° increments, 100ms/frame)
+- Fallback: colored circles if image files missing
+
+**Save Profile Dialog** (400×250 popup):
+- Save to P1 or P2 (purple buttons)
+- Load from JSON file (cyan button, opens file dialog)
+- Profiles store curve points, options, and timestamp
+
+---
+
+## Additional Systems
+
+### hck_GPT — Local Intelligence Layer
+Fully offline, rule-based insights engine built on Stats Engine data:
+- `InsightsEngine` singleton: habit tracking, anomaly awareness, recurring pattern detection
+- "Today Report" Toplevel: session/lifetime uptime, CPU/GPU/RAM chart, top processes, alert status
+- Commands: `stats`, `alerts`, `insights`, `teaser`, `health`, `report` (+ Polish equivalents)
+- 7-day pattern detection: finds apps used on 50%+ of days with >5% CPU or >100MB RAM
+- Session milestones at 1h, 2h, 4h, 8h, 12h marks
+
+### HCK Stats Engine v2 — SQLite Long-Term Storage
+Multi-granularity aggregation pipeline:
+- **Minute stats**: raw 1-minute averages (retained 7 days)
+- **Hourly stats**: hourly aggregates (retained 90 days)
+- **Daily/Weekly/Monthly**: retained forever
+- WAL mode for concurrent UI reads + scheduler writes
+- Per-process CPU/RAM tracking with hourly/daily flush
+- Spike/anomaly event detection with severity levels
+- `flush_on_shutdown()`: aggregates current incomplete hour before exit — data persists across sessions
+
+### Monitoring & Alerts — Time-Travel Statistics
+- Temperature area chart with 1D/3D/1W/1M scale, spike detection (mean + 1.5×std)
+- Voltage/Load multi-line chart with anomaly highlighting
+- Stats panels: Today AVG, Lifetime AVG, Max Safe, Current, Spikes
+- Events log from SQLite
+
+### Overlay Widget
+- Always-on-top Toplevel (`-topmost`, `-toolwindow`, `overrideredirect`)
+- CPU/RAM/GPU live display, draggable, auto-launches on startup
+- Hidden from taskbar, runs independently
 -
 ## Architecture
 Modular, scalable design:
@@ -256,7 +399,7 @@ Fixed broken imports after cleanup
 - Safe system optimizations with rollback
 
 
-## Project Structure
+## 📁 Project Structure
 ```
 HCK_Labs/PC_Workman_HCK/
 ├── core/
@@ -299,7 +442,7 @@ HCK_Labs/PC_Workman_HCK/
 └── import_core.py
 ```
 -
-## Installation
+## 🛠️ Installation
 
 ### Requirements
 - **Python 3.9+** (or use .exe)
@@ -327,7 +470,7 @@ python startup.py
 ### From .exe
 [Download from Releases](https://github.com/HuckleR2003/PC_Workman_HCK/releases) → Double-click → Done
 -
-## Usage
+## 📖 Usage
 ### First Launch
 1. Dashboard opens showing real-time metrics
 2. Give it 5 seconds to collect initial data
@@ -349,7 +492,7 @@ python startup.py
 
 Click any process to see more details.
 -
-## Data & Privacy
+## 📈 Data & Privacy
 
 ### What's Collected
 - CPU/GPU/RAM usage (on your device only)
@@ -369,7 +512,7 @@ Click any process to see more details.
 - No user tracking
 - Open source (code is auditable)
 -
-## Versioning
+## 🗂️ Versioning
 
 | Version | Status | Key Features |
 |---------|--------|--------------|
@@ -384,7 +527,7 @@ Click any process to see more details.
 
 **[Full Changelog](./CHANGELOG.md)**
 -
-## Contributing
+## 🤝 Contributing
 
 ### For Users
 - Found a bug? [Open Issue](https://github.com/HuckleR2003/PC_Workman_HCK/issues)
@@ -397,7 +540,7 @@ Click any process to see more details.
 - Include tests for new features
 - Update documentation
 -
-## System Requirements
+## 💻 System Requirements
 
 **Minimum:**
 - Python 3.9+
@@ -422,7 +565,7 @@ Click any process to see more details.
 - **[CONTRIBUTING.md](./CONTRIBUTING.md)** - How to contribute
 - **[docs/TECHNICAL.md](./docs/TECHNICAL.md)** - Architecture deep dive (coming)
 -
-## About
+## 👤 About
 
 **Marcin Firmuga** | Software Engineer
 
@@ -439,6 +582,4 @@ Part of **[HCK_Labs](https://github.com/HuckleR2003/HCK_Labs)** initiative.
 **MIT License** © 2025 HCK_Labs / Marcin Firmuga
 Free for personal and commercial use. Attribution appreciated.
 -
-
 **Ship what you have. Improve it later.** 💙
-
