@@ -4,6 +4,7 @@
 
 ![Status](https://img.shields.io/badge/Status-Active%20Development-green)
 ![Version](https://img.shields.io/badge/Version-1.6.8-blue)
+![Roadmap](https://img.shields.io/badge/to%201.7.8-orange)
 ![Python](https://img.shields.io/badge/Python-3.9+-brightgreen) 
 ![License](https://img.shields.io/badge/License-MIT-blue)
 
