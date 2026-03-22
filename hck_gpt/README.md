@@ -1,39 +1,39 @@
 # hck_GPT Module
 
-## 📋 Opis
+## Description
 
-hck_GPT to moduł AI asystenta dla PC Workman, zapewniający inteligentne optymalizacje systemu i wsparcie użytkownika.
+hck_GPT is the AI assistant module for PC Workman, providing intelligent system optimizations and user support.
 
-## 🗂️ Struktura Modułu
+## Module Structure
 
 ```
 hck_gpt/
-├── __init__.py                  # Inicjalizacja modułu
-├── chat_handler.py              # Główna logika chatu i przetwarzanie komend
-├── service_setup_wizard.py      # Kreator optymalizacji usług Windows
-├── services_manager.py          # Manager usług Windows (włączanie/wyłączanie)
-└── README.md                    # Dokumentacja (ten plik)
+├── __init__.py                  # Module initialization
+├── chat_handler.py              # Main chat logic and command processing
+├── service_setup_wizard.py      # Windows services optimization wizard
+├── services_manager.py          # Windows services manager (enable/disable)
+└── README.md                    # Documentation (this file)
 ```
 
-## ⚙️ Funkcje
+## Features
 
-### 1. Service Setup Wizard 🧙
+### 1. Service Setup Wizard
 
-Interaktywny kreator, który pomaga użytkownikowi zoptymalizować PC poprzez wyłączenie niepotrzebnych usług Windows.
+Interactive wizard that helps users optimize their PC by disabling unnecessary Windows services.
 
-**Jak używać:**
+**How to use:**
 ```
 > service setup
 ```
 
-**Proces:**
-1. Powitanie i wyjaśnienie
-2. Seria pytań o użycie konkretnych funkcji (Printer, Bluetooth, Remote Desktop, etc.)
-3. Podsumowanie i potwierdzenie
-4. Aplikacja optymalizacji
-5. Zapis konfiguracji
+**Process:**
+1. Welcome and explanation
+2. Series of questions about specific features (Printer, Bluetooth, Remote Desktop, etc.)
+3. Summary and confirmation
+4. Apply optimizations
+5. Save configuration
 
-**Pytania zadawane przez kreator:**
+**Questions asked by wizard:**
 - Do you have a Printer connected to your PC?
 - Do you use Bluetooth devices?
 - Do you use Remote Desktop or PC sharing?
@@ -42,11 +42,11 @@ Interaktywny kreator, który pomaga użytkownikowi zoptymalizować PC poprzez wy
 - Do you use Xbox gaming features?
 - Do you want to keep Windows telemetry enabled?
 
-### 2. Services Manager 🔧
+### 2. Services Manager
 
-Zarządza usługami Windows - wyłącza i włącza je na podstawie preferencji użytkownika.
+Manages Windows services - disables and enables them based on user preferences.
 
-**Obsługiwane kategorie usług:**
+**Supported service categories:**
 - **Printer** - Print Spooler
 - **Bluetooth** - Bluetooth Support Services
 - **Remote** - Remote Desktop & Registry
@@ -55,43 +55,43 @@ Zarządza usługami Windows - wyłącza i włącza je na podstawie preferencji u
 - **Xbox** - Xbox Services (XblAuthManager, XblGameSave, etc.)
 - **Telemetry** - Windows Telemetry & Diagnostics
 
-**Konfiguracja zapisywana w:**
+**Configuration saved in:**
 ```
 data/services_config.json
 ```
 
-### 3. Chat Handler 💬
+### 3. Chat Handler
 
-Przetwarza wiadomości użytkownika i kieruje je do odpowiednich komponentów.
+Processes user messages and routes them to appropriate components.
 
-**Dostępne komendy:**
+**Available commands:**
 
-| Komenda | Opis |
-|---------|------|
-| `service setup` | Uruchom kreator optymalizacji |
-| `service status` | Pokaż status usług |
-| `restore services` | Przywróć wszystkie wyłączone usługi |
-| `help` | Pokaż dostępne komendy |
+| Command | Description |
+|---------|-------------|
+| `service setup` | Launch optimization wizard |
+| `service status` | Show services status |
+| `restore services` | Restore all disabled services |
+| `help` | Show available commands |
 
-## 🚀 Integracja
+## Integration
 
-### W UI (hck_gpt_panel.py)
+### In UI (hck_gpt_panel.py)
 
 ```python
 from hck_gpt.chat_handler import ChatHandler
 
-# Inicjalizacja
+# Initialize
 self.chat_handler = ChatHandler()
 
-# Przetwarzanie wiadomości
+# Process messages
 responses = self.chat_handler.process_message(user_input)
 for response in responses:
     self.add_message(response)
 ```
 
-## 📊 Przykładowy Flow
+## Example Flow
 
-### Service Setup - Pełny Proces
+### Service Setup - Full Process
 
 ```
 User: service setup
@@ -126,7 +126,7 @@ GPT: ━━━━━━━━━━━━━━━━━━━━━━━━━
      Do you use Bluetooth devices?
      (Yes/No)
 
-... (więcej pytań)
+... (more questions)
 
 GPT: ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
      ✅ Service Setup - Summary
@@ -152,15 +152,15 @@ GPT: ⚙️  Applying optimizations...
         3 services optimized
 ```
 
-## 🔐 Wymagania Uprawnień
+## Administrator Permissions
 
-**⚠️ WAŻNE:** Zarządzanie usługami Windows wymaga uprawnień administratora!
+**IMPORTANT:** Managing Windows services requires administrator permissions.
 
-Aby wyłączać/włączać usługi, aplikacja musi być uruchomiona jako administrator.
+To disable/enable services, the application must be run as administrator.
 
-## 📝 Konfiguracja
+## Configuration
 
-Plik konfiguracyjny: `data/services_config.json`
+Configuration file: `data/services_config.json`
 
 ```json
 {
@@ -173,63 +173,63 @@ Plik konfiguracyjny: `data/services_config.json`
 }
 ```
 
-## 🛠️ Development
+## Development
 
-### Dodawanie Nowej Kategorii Usług
+### Adding New Service Category
 
-W `services_manager.py`:
+In `services_manager.py`:
 
 ```python
 SERVICES = {
-    "nowa_kategoria": {
+    "new_category": {
         "services": ["ServiceName1", "ServiceName2"],
         "display": "Display Name",
-        "description": "Opis usługi"
+        "description": "Service description"
     }
 }
 ```
 
-W `service_setup_wizard.py`:
+In `service_setup_wizard.py`:
 
 ```python
 self.questions.append({
-    "id": "nowa_kategoria",
-    "question": "Pytanie do użytkownika?",
+    "id": "new_category",
+    "question": "Question for user?",
     "hint": "(Yes/No)",
-    "service_category": "nowa_kategoria"
+    "service_category": "new_category"
 })
 ```
 
-### Dodawanie Nowej Komendy
+### Adding New Command
 
-W `chat_handler.py`:
+In `chat_handler.py`:
 
 ```python
 def process_message(self, user_message):
     # ...
-    elif "nowa komenda" in message_lower:
+    elif "new command" in message_lower:
         return self._handle_new_command()
 ```
 
-## 🐛 Debugowanie
+## Debugging
 
 ```python
-# Włącz verbose logging
+# Enable verbose logging
 import logging
 logging.basicConfig(level=logging.DEBUG)
 ```
 
-## 📈 Przyszłe Funkcje (Roadmap)
+## Future Features (Roadmap)
 
-- [ ] Pełna integracja AI (GPT/LLM)
-- [ ] Analiza performance w czasie rzeczywistym
-- [ ] Inteligentne sugestie optymalizacji
-- [ ] Predykcyjny monitoring
-- [ ] Eksport/import konfiguracji
-- [ ] Harmonogramy optymalizacji
-- [ ] Powiadomienia o problemach
+- Full AI integration (GPT/LLM)
+- Real-time performance analysis
+- Intelligent optimization suggestions
+- Predictive monitoring
+- Export/import configurations
+- Optimization schedules
+- Problem notifications
 
-## 📄 Licencja
+## License
 
-Part of PC Workman - HCK_Labs
+Part of PC Workman - HCK_Labs  
 Developed by Marcin "HCK" Firmuga
