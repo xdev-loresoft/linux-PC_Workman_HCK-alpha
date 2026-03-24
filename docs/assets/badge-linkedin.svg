@@ -1,0 +1,24 @@
+<svg viewBox="0 0 160 48" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="grad-linkedin" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0a192f;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1a1d24;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background with gradient -->
+  <rect width="160" height="48" rx="6" fill="url(#grad-linkedin)"/>
+  
+  <!-- White bottom bar -->
+  <rect y="45" width="160" height="3" fill="#ffffff"/>
+  
+  <!-- LinkedIn Icon -->
+  <g transform="translate(12, 12)">
+    <rect width="8" height="18" fill="#ffffff"/>
+    <circle cx="4" cy="2" r="2" fill="#ffffff"/>
+    <path d="M14 18V10c0-2.5-1.5-4-3.5-4S8 7.5 8 10v8" stroke="#ffffff" stroke-width="1.5" fill="none"/>
+  </g>
+  
+  <!-- Text -->
+  <text x="32" y="32" font-family="Arial, sans-serif" font-size="14" font-weight="600" fill="#ffffff">LinkedIn</text>
+</svg>
