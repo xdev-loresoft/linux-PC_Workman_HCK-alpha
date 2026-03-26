@@ -1,21 +1,17 @@
-# core/scheduler.py
-"""
-core.scheduler updated
-- collects per-second snapshots
-- every 60 seconds computes minute-average from last 60 samples and writes to logger.minute buffer
-"""
-
+### xdev - scheduler.py LINUX - PC Workman 1.6.8
 from import_core import register_component, COMPONENTS
-import threading, time, traceback, statistics
+import threading
+import time
+import traceback
+import statistics
 
-# Stats Engine v2 references (lazy-loaded)
 _stats_aggregator = None
 _process_aggregator = None
 _event_detector = None
 _stats_loaded = False
 
+
 def _load_stats_engine():
-    """Lazy-load stats engine components (safe if not available)"""
     global _stats_aggregator, _process_aggregator, _event_detector, _stats_loaded
     if _stats_loaded:
         return
@@ -29,6 +25,7 @@ def _load_stats_engine():
         _event_detector = event_detector
     except Exception as e:
         print(f"[Scheduler] Stats engine not available: {e}")
+
 
 class Scheduler:
     def __init__(self, sample_interval=1.0):
@@ -46,22 +43,25 @@ class Scheduler:
         if not monitor or not logger:
             return
 
-        # Lazy-load stats engine on first worker tick
         _load_stats_engine()
+
+        next_tick = time.monotonic()
 
         while not self._stop.is_set():
             try:
+                start = time.monotonic()
+
                 snap = monitor.read_snapshot()
-                # record per second
+
                 row = {
                     'timestamp': snap['timestamp'],
                     'cpu_percent': snap.get('cpu_percent', 0.0),
                     'ram_percent': snap.get('ram_percent', 0.0),
                     'gpu_percent': snap.get('gpu_percent', 0.0)
                 }
+
                 logger.record_snapshot(row)
 
-                # --- Stats Engine v2: accumulate per-process data every second ---
                 if _process_aggregator:
                     try:
                         proc_list = snap.get('processes', [])
@@ -71,64 +71,85 @@ class Scheduler:
                     except Exception:
                         pass
 
-                # simple per-60s aggregation
                 self._counter += 1
+
                 if self._counter >= 60:
-                    # compute average of last 60 samples
                     samples = logger.get_last_n_samples(60)
+
                     if samples:
                         cpu_vals = [float(s['cpu_percent']) for s in samples]
                         ram_vals = [float(s['ram_percent']) for s in samples]
                         gpu_vals = [float(s['gpu_percent']) for s in samples]
+
                         cpu_avg = statistics.mean(cpu_vals)
                         ram_avg = statistics.mean(ram_vals)
                         gpu_avg = statistics.mean(gpu_vals)
-                        # minute timestamp = start of minute window (rounded)
-                        minute_ts = int(time.time())
-                        logger.record_minute_avg(minute_ts, cpu_avg, ram_avg, gpu_avg)
 
-                        # --- Stats Engine v2: feed minute data to aggregator ---
+                        minute_ts = int(time.time())
+
+                        logger.record_minute_avg(
+                            minute_ts, cpu_avg, ram_avg, gpu_avg
+                        )
+
                         if _stats_aggregator:
                             try:
-                                # Get temperature readings
                                 _cpu_temp = None
                                 _gpu_temp = None
+
                                 try:
                                     snap = monitor.read_snapshot()
                                     _cpu_temp = snap.get('cpu_temp', None)
                                     _gpu_temp = snap.get('gpu_temp', None)
+
                                     if _cpu_temp is None:
                                         _cpu_temp = 35 + cpu_avg * 0.5
                                 except Exception:
                                     pass
+
                                 _stats_aggregator.on_minute_tick(
-                                    minute_ts, cpu_avg, ram_avg, gpu_avg,
-                                    cpu_vals, ram_vals, gpu_vals,
-                                    cpu_temp=_cpu_temp, gpu_temp=_gpu_temp
+                                    minute_ts,
+                                    cpu_avg,
+                                    ram_avg,
+                                    gpu_avg,
+                                    cpu_vals,
+                                    ram_vals,
+                                    gpu_vals,
+                                    cpu_temp=_cpu_temp,
+                                    gpu_temp=_gpu_temp
                                 )
                             except Exception:
                                 pass
 
-                        # --- Stats Engine v2: spike detection ---
                         if _event_detector:
                             try:
-                                _event_detector.check_and_log_spike(cpu_avg, ram_avg, gpu_avg)
+                                _event_detector.check_and_log_spike(
+                                    cpu_avg, ram_avg, gpu_avg
+                                )
                             except Exception:
                                 pass
 
                     self._counter = 0
 
-                # optional light analysis
                 if analyzer:
                     try:
-                        analyzer.detect_spike_last(seconds=30, threshold_percent=50.0)
+                        analyzer.detect_spike_last(
+                            seconds=30,
+                            threshold_percent=50.0
+                        )
                     except Exception:
                         pass
 
-                time.sleep(self.sample_interval)
+                next_tick += self.sample_interval
+                sleep_time = next_tick - time.monotonic()
+
+                if sleep_time > 0:
+                    self._stop.wait(timeout=sleep_time)
+                else:
+                    next_tick = time.monotonic()
+
             except Exception:
                 traceback.print_exc()
-                time.sleep(self.sample_interval)
+                self._stop.wait(timeout=self.sample_interval)
 
     def start_loop(self):
         if self._thread and self._thread.is_alive():
@@ -143,5 +164,5 @@ class Scheduler:
         if self._thread:
             self._thread.join(timeout=2.0)
 
-# register instance
+
 scheduler = Scheduler(sample_interval=1.0)
