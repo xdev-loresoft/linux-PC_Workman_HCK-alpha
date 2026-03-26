@@ -1,26 +1,17 @@
-### HCK_Labs
-# core/monitor.py
-"""
-core.monitor
-Real monitor using psutil (CPU, RAM, per-process) and optional GPUtil for GPU.
-Provides:
- - Monitor.read_snapshot() -> dict
- - Monitor.top_processes(n=6) -> list of dicts
- - In-memory buffer (managed by scheduler/logger) lives outside here.
-"""
-
+### xdev - linux - for PC Workman 1.6.8
 from import_core import register_component
 import time
 import threading
 import psutil
 import platform
+import os
 
-# Try to import GPUtil. If not = GPU usage = 0
 try:
     import GPUtil
     _GPUS_AVAILABLE = True
 except Exception:
     _GPUS_AVAILABLE = False
+
 
 class Monitor:
     def __init__(self):
@@ -31,8 +22,6 @@ class Monitor:
         register_component(self.name, self)
 
     def start_background_collection(self, interval=1.0):
-        """Start background thread that collects snapshots every N seconds.
-        This keeps process_iter() off the GUI thread."""
         if self._bg_running:
             return
         self._bg_running = True
@@ -45,7 +34,6 @@ class Monitor:
         self._bg_running = False
 
     def _bg_collect_loop(self):
-        """Background thread: collect snapshots continuously."""
         while self._bg_running:
             try:
                 snap = self._collect_snapshot()
@@ -56,24 +44,70 @@ class Monitor:
             time.sleep(self._bg_interval)
 
     def _get_gpu_percent(self):
-        if not _GPUS_AVAILABLE:
-            return 0.0
+        if _GPUS_AVAILABLE:
+            try:
+                gpus = GPUtil.getGPUs()
+                if gpus:
+                    vals = [g.load * 100.0 for g in gpus]
+                    return round(sum(vals) / len(vals), 2)
+            except Exception:
+                pass
+
         try:
-            gpus = GPUtil.getGPUs()
-            if not gpus:
-                return 0.0
-            # return avg usage percentage across GPUs
-            vals = [g.load * 100.0 for g in gpus]
-            return round(sum(vals) / len(vals), 2)
+            import subprocess
+            result = subprocess.run(
+                ["nvidia-smi", "--query-gpu=utilization.gpu", "--format=csv,noheader,nounits"],
+                capture_output=True,
+                text=True
+            )
+            if result.returncode == 0:
+                vals = [float(x) for x in result.stdout.strip().split("\n") if x]
+                if vals:
+                    return round(sum(vals) / len(vals), 2)
         except Exception:
-            return 0.0
+            pass
+
+        return 0.0
+
+    def _get_linux_temp(self):
+        try:
+            thermal_path = "/sys/class/thermal"
+            temps = []
+            for entry in os.listdir(thermal_path):
+                zone_path = os.path.join(thermal_path, entry, "temp")
+                if os.path.isfile(zone_path):
+                    with open(zone_path, "r") as f:
+                        val = int(f.read().strip()) / 1000.0
+                        temps.append(val)
+            if temps:
+                return round(max(temps), 2)
+        except Exception:
+            pass
+        return 0.0
+
+    def _get_load_avg(self):
+        try:
+            if hasattr(os, "getloadavg"):
+                load1, _, _ = os.getloadavg()
+                return round(load1, 2)
+        except Exception:
+            pass
+        return 0.0
 
     def _collect_snapshot(self):
-        """Internal: actually collect system data (may be slow ~100-300ms)."""
         ts = time.time()
-        cpu = psutil.cpu_percent(interval=None)  # non-blocking
+        cpu = psutil.cpu_percent(interval=None)
         ram = psutil.virtual_memory().percent
         gpu = self._get_gpu_percent()
+
+        system = platform.system()
+
+        cpu_temp = 0.0
+        load_avg = 0.0
+
+        if system == "Linux":
+            cpu_temp = self._get_linux_temp()
+            load_avg = self._get_load_avg()
 
         procs = []
         for p in psutil.process_iter(['pid', 'name', 'cpu_percent', 'memory_info']):
@@ -81,13 +115,15 @@ class Monitor:
                 info = p.info
                 cpu_p = info.get('cpu_percent') or 0.0
                 mem_info = info.get('memory_info')
-                ram_mb = (mem_info.rss / (1024*1024)) if mem_info else 0.0
+                ram_mb = (mem_info.rss / (1024 * 1024)) if mem_info else 0.0
+
                 procs.append({
                     'pid': info.get('pid'),
                     'name': (info.get('name') or '').strip(),
                     'cpu_percent': round(cpu_p, 2),
                     'ram_MB': round(ram_mb, 2)
                 })
+
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 continue
 
@@ -96,34 +132,32 @@ class Monitor:
             'cpu_percent': round(cpu, 2),
             'ram_percent': round(ram, 2),
             'gpu_percent': round(gpu, 2),
+            'cpu_temp': cpu_temp,
+            'load_avg': load_avg,
             'processes': procs
         }
 
     def read_snapshot(self):
-        """Returns cached snapshot (non-blocking for GUI thread).
-        Falls back to direct collection if background thread not started."""
         with self._snapshot_lock:
             if self._cached_snapshot is not None:
                 return self._cached_snapshot
-        # Fallback: direct collection (blocks caller)
         return self._collect_snapshot()
 
     def top_processes(self, n=6, by='cpu'):
-        """
-        Return top n processes sorted by 'cpu' or 'ram' or 'cpu+ram'.
-        'ram' sorts by ram_MB, 'cpu' sorts by cpu_percent.
-        """
         snap = self.read_snapshot()
         procs = snap.get('processes', [])
+
         if by == 'ram':
             key = lambda p: p.get('ram_MB', 0.0)
         elif by == 'cpu+ram':
-            key = lambda p: (p.get('cpu_percent', 0.0) + (p.get('ram_MB', 0.0) / 1024.0))
+            key = lambda p: (
+                p.get('cpu_percent', 0.0) + (p.get('ram_MB', 0.0) / 1024.0)
+            )
         else:
             key = lambda p: p.get('cpu_percent', 0.0)
 
         procs_sorted = sorted(procs, key=key, reverse=True)
         return procs_sorted[:n]
 
-# register instance
+
 monitor = Monitor()
